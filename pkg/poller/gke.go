@@ -52,11 +52,37 @@ func (g *GKE) cleanupExpiredClusters(ctx context.Context) error {
 		return err
 	}
 
+	listClustersResponse, err := g.Client.ListClusters(ctx, &containerpb.ListClustersRequest{
+		Parent: fmt.Sprintf("projects/%s/locations/-", g.Project),
+	})
+
 	for _, cluster := range expiredClusters {
+		if cluster.Ignore {
+			continue
+		}
+
+		location, err := g.getClusterLocation(listClustersResponse, cluster.Name)
+
+		_, err = g.Client.DeleteCluster(ctx, &containerpb.DeleteClusterRequest{
+			Name: fmt.Sprintf("projects/%s/locations/%s/clusters/%s", g.Project, location, cluster.Name),
+		})
+		if err != nil {
+			return err
+		}
 		g.Log.Info("Removed expired cluster", "cluster", cluster.Name)
 	}
 
 	return nil
+}
+
+func (g *GKE) getClusterLocation(response *containerpb.ListClustersResponse, name string) (string, error) {
+	for _, cluster := range response.Clusters {
+		if name == cluster.Name {
+			return cluster.Location, nil
+		}
+	}
+
+	return "", fmt.Errorf("couldn't find cluster: %s", name)
 }
 
 func (g *GKE) syncGKEClusters(ctx context.Context) error {
