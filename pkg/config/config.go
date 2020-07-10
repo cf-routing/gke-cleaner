@@ -17,6 +17,22 @@ type Config struct {
 	GCloudPollInterval      time.Duration
 	GCloudGKELabelFilters   []string
 	ClusterLifetimeDuration time.Duration
+	VCAPServices            VCAPServices
+}
+
+type VCAPServices struct {
+	UserProvided []UserProvidedVCAPServices `json:"user-provided"`
+}
+
+type UserProvidedVCAPServices struct {
+	BindingName    string            `json:"binding_name"`
+	Credentials    map[string]string `json:"credentials"`
+	InstanceName   string            `json:"instance_name"`
+	Label          string            `json:"label"`
+	Name           string            `json:"name"`
+	SyslogDrainURL string            `json:"syslog_drain_url"`
+	Tags           []string          `json:"tags"`
+	VolumeMounts   []string          `json:"volume_mounts"`
 }
 
 func LoadFromEnv(log logr.Logger) (Config, error) {
@@ -71,11 +87,34 @@ func LoadFromEnv(log logr.Logger) (Config, error) {
 		log.Info("GCLOUD_GKE_LABEL_FILTERS unset.")
 	}
 
+	vcapServicesStr, ok := os.LookupEnv("VCAP_SERVICES")
+	if !ok {
+		return Config{}, fmt.Errorf("VCAP_SERVICES environment variable not found")
+	}
+	log.Info("Loaded", "VCAP_SERVICES", "<redacted>")
+
+	var vcapServices VCAPServices
+	err = json.Unmarshal([]byte(vcapServicesStr), &vcapServices)
+	if err != nil {
+		return Config{}, fmt.Errorf("failed to parse VCAP_SERVICES environment variable: %s", err)
+	}
+
 	return Config{
 		Port:                    port,
 		Project:                 project,
 		GCloudPollInterval:      gcloudPollInterval,
 		GCloudGKELabelFilters:   gcloudGKELabelFilter,
 		ClusterLifetimeDuration: clusterLifetimeDuration,
+		VCAPServices:            vcapServices,
 	}, nil
+}
+
+func (c Config) GetUserProvidedVCAPServiceByBindingName(bindingName string) (UserProvidedVCAPServices, bool) {
+	for _, service := range c.VCAPServices.UserProvided {
+		if service.BindingName == bindingName {
+			return service, true
+		}
+	}
+
+	return UserProvidedVCAPServices{}, false
 }

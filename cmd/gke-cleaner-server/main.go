@@ -22,7 +22,7 @@ import (
 	container "cloud.google.com/go/container/apiv1"
 	ifrithttpserver "github.com/tedsuo/ifrit/http_server"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "github.com/go-sql-driver/mysql"
 )
 
 func main() {
@@ -40,7 +40,19 @@ func main() {
 		os.Exit(1)
 	}
 
-	db, err := sql.Open("sqlite3", "./temp.db")
+	dbService, ok := cfg.GetUserProvidedVCAPServiceByBindingName("db")
+	if !ok {
+		log.WithName("main").Error(err, "failed to find user provided vcap service with binding name 'db' in VCAP_SERVICES")
+		os.Exit(1)
+	}
+
+	dbURI, ok := dbService.Credentials["uri"]
+	if !ok {
+		log.WithName("main").Error(err, "failed to find uri in credentials of user provided service with binding name 'db'")
+		os.Exit(1)
+	}
+
+	db, err := sql.Open("mysql", fmt.Sprintf("%s?parseTime=true", dbURI))
 	if err != nil {
 		log.WithName("main").Error(err, "failed to open connection to database")
 		os.Exit(1)

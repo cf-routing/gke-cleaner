@@ -6,6 +6,7 @@ require (
 	cloud.google.com/go v0.57.0
 	github.com/go-logr/logr v0.1.0
 	github.com/go-logr/zapr v0.1.1
+	github.com/go-sql-driver/mysql v1.5.0
 	github.com/golang/protobuf v1.4.1 // indirect
 	github.com/google/martian v2.1.0+incompatible
 	github.com/gorilla/mux v1.7.4

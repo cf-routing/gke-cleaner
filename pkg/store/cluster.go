@@ -19,7 +19,7 @@ type ClusterRecord struct {
 
 func (c *Cluster) Insert(ctx context.Context, name string, expirationDate time.Time, ignore bool) error {
 	statement, err := c.DB.Prepare(`
-		INSERT INTO Clusters (Name, ExpirationDate, Ignore)
+		INSERT INTO Clusters (Name, ExpirationDate, IgnoreMe)
 		VALUES (?, ?, ?)
 	`)
 	if err != nil {
@@ -59,7 +59,7 @@ func (c *Cluster) List(ctx context.Context) ([]ClusterRecord, error) {
 			ID,
 			Name,
 			ExpirationDate,
-			Ignore
+			IgnoreMe
 		FROM Clusters`)
 	if err != nil {
 		return []ClusterRecord{}, err
@@ -101,7 +101,7 @@ func (c *Cluster) ListExpired(ctx context.Context) ([]ClusterRecord, error) {
 			ID,
 			Name,
 			ExpirationDate,
-			Ignore
+			IgnoreMe
 		FROM Clusters
 		WHERE ExpirationDate < ?`, time.Now())
 	if err != nil {
@@ -139,7 +139,7 @@ func (c *Cluster) ListExpired(ctx context.Context) ([]ClusterRecord, error) {
 func (c *Cluster) UpdateIgnore(ctx context.Context, name string, ignore bool) error {
 	statement, err := c.DB.Prepare(`
 		UPDATE Clusters
-		SET Ignore = ?
+		SET IgnoreMe = ?
 		WHERE Name = ?
 	`)
 	if err != nil {
