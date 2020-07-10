@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/christianang/gke-cleaner/pkg/store"
@@ -18,9 +19,10 @@ type GKE struct {
 	Client       *container.ClusterManagerClient
 	ClusterStore *store.Cluster
 
-	Project          string
-	PollInterval     time.Duration
-	LifetimeDuration time.Duration
+	Project                string
+	PollInterval           time.Duration
+	LifetimeDuration       time.Duration
+	ResourceLabelFilterMap []string
 }
 
 func (g *GKE) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
@@ -55,6 +57,9 @@ func (g *GKE) cleanupExpiredClusters(ctx context.Context) error {
 	listClustersResponse, err := g.Client.ListClusters(ctx, &containerpb.ListClustersRequest{
 		Parent: fmt.Sprintf("projects/%s/locations/-", g.Project),
 	})
+	if err != nil {
+		return err
+	}
 
 	for _, cluster := range expiredClusters {
 		if cluster.Ignore {
@@ -62,12 +67,17 @@ func (g *GKE) cleanupExpiredClusters(ctx context.Context) error {
 		}
 
 		location, err := g.getClusterLocation(listClustersResponse, cluster.Name)
+		if err != nil {
+			g.Log.Error(err, "Failed to get cluster location. Skipping.", "cluster", cluster.Name)
+			continue
+		}
 
 		_, err = g.Client.DeleteCluster(ctx, &containerpb.DeleteClusterRequest{
 			Name: fmt.Sprintf("projects/%s/locations/%s/clusters/%s", g.Project, location, cluster.Name),
 		})
 		if err != nil {
-			return err
+			g.Log.Error(err, "Failed to delete cluster. Skipping.", "cluster", cluster.Name)
+			continue
 		}
 		g.Log.Info("Removed expired cluster", "cluster", cluster.Name)
 	}
@@ -98,7 +108,9 @@ func (g *GKE) syncGKEClusters(ctx context.Context) error {
 		return err
 	}
 
-	addedClusters, removedClusters := diffClusters(response.Clusters, knownClusters)
+	clusters := filter(response.Clusters, g.ResourceLabelFilterMap)
+
+	addedClusters, removedClusters := diffClusters(clusters, knownClusters)
 
 	for _, cluster := range addedClusters {
 		g.Log.Info("Discovered", "cluster", cluster)
@@ -117,6 +129,26 @@ func (g *GKE) syncGKEClusters(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func filter(clusters []*containerpb.Cluster, filters []string) []*containerpb.Cluster {
+	filteredClusters := []*containerpb.Cluster{}
+	for _, cluster := range clusters {
+		for _, filter := range filters {
+			k, v := parseFilter(filter)
+			if cluster.ResourceLabels[k] == v {
+				filteredClusters = append(filteredClusters, cluster)
+				break
+			}
+		}
+	}
+
+	return filteredClusters
+}
+
+func parseFilter(filter string) (string, string) {
+	s := strings.Split(filter, "=")
+	return s[0], s[1]
 }
 
 func diffClusters(gkeClusters []*containerpb.Cluster, knownClusters []store.ClusterRecord) ([]string, []string) {

@@ -1,6 +1,7 @@
 package config
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -14,6 +15,7 @@ type Config struct {
 	Port                    int
 	Project                 string
 	GCloudPollInterval      time.Duration
+	GCloudGKELabelFilters   []string
 	ClusterLifetimeDuration time.Duration
 }
 
@@ -57,10 +59,23 @@ func LoadFromEnv(log logr.Logger) (Config, error) {
 		return Config{}, fmt.Errorf("failed to parse CLUSTER_LIFETIME_DURATION environment variable: %s", err)
 	}
 
+	var gcloudGKELabelFilter []string
+	gcloudGKELabelFilterStr, ok := os.LookupEnv("GCLOUD_GKE_LABEL_FILTERS")
+	if ok {
+		err = json.Unmarshal([]byte(gcloudGKELabelFilterStr), &gcloudGKELabelFilter)
+		if err != nil {
+			return Config{}, fmt.Errorf("failed to parse GCLOUD_GKE_LABEL_FILTERS environment variable: %s", err)
+		}
+		log.Info("Loaded", "GCLOUD_GKE_LABEL_FILTERS", gcloudGKELabelFilter)
+	} else {
+		log.Info("GCLOUD_GKE_LABEL_FILTERS unset.")
+	}
+
 	return Config{
 		Port:                    port,
 		Project:                 project,
 		GCloudPollInterval:      gcloudPollInterval,
+		GCloudGKELabelFilters:   gcloudGKELabelFilter,
 		ClusterLifetimeDuration: clusterLifetimeDuration,
 	}, nil
 }

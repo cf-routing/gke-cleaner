@@ -76,12 +76,13 @@ func main() {
 	}
 
 	gkePoller := &poller.GKE{
-		Log:              log.WithName("poller.GKE"),
-		Client:           clusterManagerClient,
-		ClusterStore:     clusterStore,
-		Project:          cfg.Project,
-		PollInterval:     cfg.GCloudPollInterval,
-		LifetimeDuration: cfg.ClusterLifetimeDuration,
+		Log:                    log.WithName("poller.GKE"),
+		Client:                 clusterManagerClient,
+		ClusterStore:           clusterStore,
+		Project:                cfg.Project,
+		PollInterval:           cfg.GCloudPollInterval,
+		LifetimeDuration:       cfg.ClusterLifetimeDuration,
+		ResourceLabelFilterMap: cfg.GCloudGKELabelFilters,
 	}
 
 	group := grouper.NewOrdered(os.Interrupt, grouper.Members{
