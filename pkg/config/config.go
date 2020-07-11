@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"strconv"
 	"time"
@@ -52,6 +53,24 @@ func LoadFromEnv(log logr.Logger) (Config, error) {
 		return Config{}, errors.New("PROJECT environment variable not found")
 	}
 	log.Info("Loaded", "PROJECT", project)
+
+	gcpServiceAccountKey, ok := os.LookupEnv("GCP_SERVICE_ACCOUNT_KEY")
+	if !ok {
+		return Config{}, errors.New("GCP_SERVICE_ACCOUNT_KEY environment variable not found")
+	}
+	gcpKeyFile, err := ioutil.TempFile("", "gcp-service-account-key")
+	if err != nil {
+		return Config{}, fmt.Errorf("failed to create temporary file for gcp service account key: %s", err)
+	}
+	defer gcpKeyFile.Close()
+
+	_, err = gcpKeyFile.Write([]byte(gcpServiceAccountKey))
+	if err != nil {
+		return Config{}, fmt.Errorf("failed to write to temporary file for gcp service account key: %s", err)
+	}
+
+	os.Setenv("GOOGLE_APPLICATION_CREDENTIALS", gcpKeyFile.Name())
+	log.Info("Loaded", "GCP_SERVICE_ACCOUNT_KEY", "<redacted>")
 
 	gcloudPollIntervalStr, ok := os.LookupEnv("GCLOUD_POLL_INTERVAL")
 	if !ok {
