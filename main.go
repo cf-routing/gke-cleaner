@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"syscall"
+	"time"
 
 	"github.com/christianang/gke-cleaner/pkg/config"
 	"github.com/christianang/gke-cleaner/pkg/handler"
@@ -104,6 +105,8 @@ func main() {
 	})
 
 	monitor := ifrit.Invoke(sigmon.New(group, syscall.SIGTERM, syscall.SIGINT))
+
+	time.Sleep(5 * time.Second)
 
 	log.WithName("main").Info("Started")
 	err = <-monitor.Wait()
