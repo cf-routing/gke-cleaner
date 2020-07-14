@@ -16,7 +16,7 @@ func (d *DB) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
 	statement, err := d.DB.Prepare(`CREATE TABLE IF NOT EXISTS Clusters (
 		ID INT NOT NULL AUTO_INCREMENT,
 		Name TEXT NOT NULL,
-		ExpirationDate DATE,
+		ExpirationDate DATETIME,
 		IgnoreMe BOOLEAN,
 		PRIMARY KEY (ID)
 	)`)
