@@ -19,6 +19,8 @@ type Config struct {
 	GCloudGKELabelFilters   []string
 	ClusterLifetimeDuration time.Duration
 	VCAPServices            VCAPServices
+	BasicAuthUsername       string
+	BasicAuthPassword       string
 }
 
 type VCAPServices struct {
@@ -118,6 +120,18 @@ func LoadFromEnv(log logr.Logger) (Config, error) {
 		return Config{}, fmt.Errorf("failed to parse VCAP_SERVICES environment variable: %s", err)
 	}
 
+	basicAuthUsername, ok := os.LookupEnv("BASIC_AUTH_USERNAME")
+	if !ok {
+		return Config{}, fmt.Errorf("BASIC_AUTH_USERNAME environment variable not found")
+	}
+	log.Info("Loaded", "BASIC_AUTH_USERNAME", "<redacted>")
+
+	basicAuthPassword, ok := os.LookupEnv("BASIC_AUTH_PASSWORD")
+	if !ok {
+		return Config{}, fmt.Errorf("BASIC_AUTH_PASSWORD environment variable not found")
+	}
+	log.Info("Loaded", "BASIC_AUTH_PASSWORD", "<redacted>")
+
 	return Config{
 		Port:                    port,
 		Project:                 project,
@@ -125,6 +139,8 @@ func LoadFromEnv(log logr.Logger) (Config, error) {
 		GCloudGKELabelFilters:   gcloudGKELabelFilter,
 		ClusterLifetimeDuration: clusterLifetimeDuration,
 		VCAPServices:            vcapServices,
+		BasicAuthUsername:       basicAuthUsername,
+		BasicAuthPassword:       basicAuthPassword,
 	}, nil
 }
 

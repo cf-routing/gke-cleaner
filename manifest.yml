@@ -5,8 +5,9 @@ applications:
   disk_quota: 32M
   buildpacks:
   - go_buildpack
-  no-route: true
   env:
     PROJECT: ((gke_project))
     GCLOUD_GKE_LABEL_FILTERS: ((gke_label_filters))
     GCP_SERVICE_ACCOUNT_KEY: ((gcp_service_account_key))
+    BASIC_AUTH_USERNAME: ((basic_auth_username))
+    BASIC_AUTH_PASSWORD: ((basic_auth_password))

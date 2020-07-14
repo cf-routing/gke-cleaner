@@ -74,11 +74,17 @@ func main() {
 		LifetimeDuration: cfg.ClusterLifetimeDuration,
 	}
 
+	basicAuthHandler := &handler.BasicAuth{
+		Username: cfg.BasicAuthUsername,
+		Password: cfg.BasicAuthPassword,
+	}
+
 	router := mux.NewRouter()
 	router.HandleFunc("/clusters", clusterHandler.List)
 	router.HandleFunc("/clusters/renew/{name}", clusterHandler.Renew).Methods("POST")
 	router.HandleFunc("/clusters/ignore/{name}", clusterHandler.Ignore).Methods("POST")
 	router.HandleFunc("/clusters/unignore/{name}", clusterHandler.Unignore).Methods("POST")
+	router.Use(basicAuthHandler.Handle)
 
 	server := ifrithttpserver.New(fmt.Sprintf(":%d", cfg.Port), router)
 
