@@ -1,0 +1,27 @@
+<!doctype html>
+<html>
+<head>
+  <title>GKE Cleaner</title>
+</head>
+<body>
+  <% @clusters.each do |cluster| %>
+    <div>
+      <h1><%= cluster['Name'] %></h1>
+      <p>Expiration Date: <%= cluster['ExpirationDate'] %></p>
+      <p>Ignore: <%= cluster['Ignore'] %></p>
+      <form action="/renew/<%= cluster['Name'] %>" method="POST">
+        <input type="submit" value="Renew" />
+      </form>
+      <% if cluster['Ignore'] %>
+        <form action="/unignore/<%= cluster['Name'] %>" method="POST">
+          <input type="submit" value="Unignore" />
+        </form>
+      <% else %>
+        <form action="/ignore/<%= cluster['Name'] %>" method="POST">
+          <input type="submit" value="Ignore" />
+        </form>
+      <% end %>
+    </div>
+  <% end %>
+</body>
+</html>

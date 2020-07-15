@@ -1,0 +1,11 @@
+---
+applications:
+- name: gke-cleaner-ui
+  memory: 256M
+  disk_quota: 256M
+  buildpacks:
+  - ruby_buildpack
+  env:
+    GKE_CLEANER_BACKEND_URL: ((gke_cleaner_backend_url))
+    BASIC_AUTH_USERNAME: ((basic_auth_username))
+    BASIC_AUTH_PASSWORD: ((basic_auth_password))
