@@ -13,20 +13,21 @@ type Cluster struct {
 type ClusterRecord struct {
 	ID             int
 	Name           string
+	CreateDate     time.Time
 	ExpirationDate time.Time
 	Ignore         bool
 }
 
-func (c *Cluster) Insert(ctx context.Context, name string, expirationDate time.Time, ignore bool) error {
+func (c *Cluster) Insert(ctx context.Context, name string, createDate time.Time, expirationDate time.Time, ignore bool) error {
 	statement, err := c.DB.Prepare(`
-		INSERT INTO Clusters (Name, ExpirationDate, IgnoreMe)
-		VALUES (?, ?, ?)
+		INSERT INTO Clusters (Name, CreateDate, ExpirationDate, IgnoreMe)
+		VALUES (?, ?, ?, ?)
 	`)
 	if err != nil {
 		return err
 	}
 
-	_, err = statement.ExecContext(ctx, name, expirationDate, ignore)
+	_, err = statement.ExecContext(ctx, name, createDate, expirationDate, ignore)
 	if err != nil {
 		return err
 	}
@@ -170,4 +171,31 @@ func (c *Cluster) UpdateExpirationDate(ctx context.Context, name string, expirat
 	}
 
 	return nil
+}
+
+func (c *Cluster) UpdateCreateAndExpirationDate(ctx context.Context, name string, createDate time.Time, expirationDate time.Time) error {
+	statement, err := c.DB.Prepare(`
+		UPDATE Clusters
+		SET CreateDate = ?
+		SET ExpirationDate = ?
+		WHERE Name = ?
+	`)
+	if err != nil {
+		return err
+	}
+
+	_, err = statement.ExecContext(ctx, createDate, expirationDate, name)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (c *ClusterRecord) GetName() string {
+	return c.Name
+}
+
+func (c *ClusterRecord) GetCreateTime() string {
+	return c.CreateDate.Format(time.RFC3339)
 }
