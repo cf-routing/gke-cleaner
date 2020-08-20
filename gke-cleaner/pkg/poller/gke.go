@@ -110,11 +110,29 @@ func (g *GKE) syncGKEClusters(ctx context.Context) error {
 
 	clusters := filter(response.Clusters, g.ResourceLabelFilterMap)
 
-	addedClusters, removedClusters := diffClusters(clusters, knownClusters)
+	addedClusters, removedClusters, updatedClusters := diffClusters(clusters, knownClusters)
 
 	for _, cluster := range addedClusters {
 		g.Log.Info("Discovered", "cluster", cluster)
-		err = g.ClusterStore.Insert(ctx, cluster, time.Now().Add(g.LifetimeDuration), false)
+		createTime, err := time.Parse(time.RFC3339, cluster.GetCreateTime())
+		if err != nil {
+			return err
+		}
+
+		err = g.ClusterStore.Insert(ctx, cluster.GetName(), createTime, createTime.Add(g.LifetimeDuration), false)
+		if err != nil {
+			return err
+		}
+	}
+
+	for _, cluster := range updatedClusters {
+		g.Log.Info("Updated", "cluster", cluster)
+		createTime, err := time.Parse(time.RFC3339, cluster.GetCreateTime())
+		if err != nil {
+			return err
+		}
+
+		err = g.ClusterStore.UpdateCreateAndExpirationDate(ctx, cluster.GetName(), createTime, createTime.Add(g.LifetimeDuration))
 		if err != nil {
 			return err
 		}
@@ -122,7 +140,7 @@ func (g *GKE) syncGKEClusters(ctx context.Context) error {
 
 	for _, cluster := range removedClusters {
 		g.Log.Info("Detected removal", "cluster", cluster)
-		err = g.ClusterStore.Delete(ctx, cluster)
+		err = g.ClusterStore.Delete(ctx, cluster.GetName())
 		if err != nil {
 			return err
 		}
@@ -151,31 +169,40 @@ func parseFilter(filter string) (string, string) {
 	return s[0], s[1]
 }
 
-func diffClusters(gkeClusters []*containerpb.Cluster, knownClusters []store.ClusterRecord) ([]string, []string) {
-	added := []string{}
-	removed := []string{}
+func diffClusters(gkeClusters []*containerpb.Cluster, knownClusters []store.ClusterRecord) ([]Cluster, []Cluster, []Cluster) {
+	added := []Cluster{}
+	removed := []Cluster{}
+	updated := []Cluster{}
 
-	gkeClusterMap := map[string]string{}
+	gkeClusterMap := map[string]*containerpb.Cluster{}
 	for _, cluster := range gkeClusters {
-		gkeClusterMap[cluster.Name] = ""
+		gkeClusterMap[cluster.Name] = cluster
 	}
 
-	knownClusterMap := map[string]string{}
+	knownClusterMap := map[string]*store.ClusterRecord{}
 	for _, cluster := range knownClusters {
-		knownClusterMap[cluster.Name] = ""
+		knownClusterMap[cluster.Name] = &cluster
 	}
 
-	for cluster := range gkeClusterMap {
-		if _, found := knownClusterMap[cluster]; !found {
+	for clusterName, cluster := range gkeClusterMap {
+		if _, found := knownClusterMap[clusterName]; !found {
 			added = append(added, cluster)
 		}
 	}
 
-	for cluster := range knownClusterMap {
-		if _, found := gkeClusterMap[cluster]; !found {
-			removed = append(removed, cluster)
+	for clusterName, cluster := range knownClusterMap {
+		c, found := gkeClusterMap[clusterName]
+		if !found {
+			removed = append(removed, c)
+		} else if cluster.GetCreateTime() != c.GetCreateTime() {
+			updated = append(updated, c)
 		}
 	}
 
-	return added, removed
+	return added, removed, updated
+}
+
+type Cluster interface {
+	GetName() string
+	GetCreateTime() string
 }
