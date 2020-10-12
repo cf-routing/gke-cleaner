@@ -132,6 +132,7 @@ func (g *GKE) syncGKEClusters(ctx context.Context) error {
 			return err
 		}
 
+		g.Log.Info("Update cluster", "clusterName", cluster.GetName(), "createTime", createTime, "expirationDate", createTime.Add(g.LifetimeDuration))
 		err = g.ClusterStore.UpdateCreateAndExpirationDate(ctx, cluster.GetName(), createTime, createTime.Add(g.LifetimeDuration))
 		if err != nil {
 			return err

@@ -176,8 +176,7 @@ func (c *Cluster) UpdateExpirationDate(ctx context.Context, name string, expirat
 func (c *Cluster) UpdateCreateAndExpirationDate(ctx context.Context, name string, createDate time.Time, expirationDate time.Time) error {
 	statement, err := c.DB.Prepare(`
 		UPDATE Clusters
-		SET CreateDate = ?
-		SET ExpirationDate = ?
+		SET CreateDate = ?, ExpirationDate = ?
 		WHERE Name = ?
 	`)
 	if err != nil {
